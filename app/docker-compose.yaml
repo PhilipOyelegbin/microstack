@@ -1,0 +1,66 @@
+services:
+  postgres-db:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: notedb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    restart: on-failure
+
+  auth-service:
+    build: ./auth-service
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      DATABASE_URL: postgres://user:password@postgres-db:5432/notedb
+      JWT_SECRET: supersecrettoken
+    depends_on:
+      - postgres-db
+    restart: on-failure
+
+  text-service:
+    build: ./text-service
+    ports:
+      - "5001:5001"
+    environment:
+      PORT: 5001
+    restart: on-failure
+
+  notes-service:
+    build: ./notes-service
+    ports:
+      - "5002:5002"
+    environment:
+      PORT: 5002
+      DATABASE_URL: host=postgres-db user=user password=password dbname=notedb port=5432 sslmode=disable
+      FLASK_SERVICE_URL: http://text-service:5001
+    depends_on:
+      - postgres-db
+      - text-service
+    restart: on-failure
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Build-time environment variable interpolation mapping
+        - REACT_APP_AUTH_URL=http://localhost:5000
+        - REACT_APP_GIN_URL=http://localhost:5002
+    ports:
+      - "8000:80"
+    depends_on:
+      - notes-service
+      - auth-service
+    restart: on-failure
+
+volumes:
+  pgdata:
+
+networks:
+  default:
+    driver: bridge

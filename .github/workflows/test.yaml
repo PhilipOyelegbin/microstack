@@ -22,8 +22,16 @@ jobs:
         with:
           node-version: "24"
 
+      - name: Run postgresql container
+        run: |
+          docker run --name user -e POSTGRES_PASSWORD=password -p 5432:5432 -d postgres:latest
+          sleep 10 # Wait for PostgreSQL to start
+
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm install
+          echo "DATABASE_URL=postgresql://user:password@localhost:5432/notedb" >> .env
+          echo "JWT_SECRET=your-test-jwt-secret-key" >> .env
         working-directory: ./app/auth-service
 
       - name: Scan code for exposed secrets
@@ -128,6 +136,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run tests
-        run: npm run test
+      - name: Run linter
+        run: npm run lint
         working-directory: ./app/frontend

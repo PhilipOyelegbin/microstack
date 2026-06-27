@@ -24,7 +24,7 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-        working-directory: app/auth-services
+        working-directory: ./app/auth-service
 
       - name: Scan code for exposed secrets
         uses: gitleaks/gitleaks-action@v2
@@ -33,7 +33,7 @@ jobs:
 
       - name: Run tests
         run: npm run test
-        working-directory: app/auth-services
+        working-directory: ./app/auth-service
 
   notes-services:
     if: github.event_name == 'pull_request' && github.base_ref == 'dev'
@@ -51,7 +51,7 @@ jobs:
 
       - name: Install dependencies
         run: go mod tidy
-        working-directory: app/notes-services
+        working-directory: ./app/notes-service
 
       - name: Scan code for exposed secrets
         uses: gitleaks/gitleaks-action@v2
@@ -60,11 +60,11 @@ jobs:
 
       - name: Build
         run: go build -v ./...
-        working-directory: app/notes-services
+        working-directory: ./app/notes-service
 
       - name: Test
         run: go test -v ./...
-        working-directory: app/notes-services
+        working-directory: ./app/notes-service
 
   text-services:
     if: github.event_name == 'pull_request' && github.base_ref == 'dev'
@@ -85,7 +85,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install flake8 pytest
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        working-directory: app/text-services
+        working-directory: ./app/text-service
 
       - name: Scan code for exposed secrets
         uses: gitleaks/gitleaks-action@v2
@@ -98,12 +98,12 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-        working-directory: app/text-services
+        working-directory: ./app/text-service
 
       - name: Test with pytest
         run: |
           pytest
-        working-directory: app/text-services
+        working-directory: ./app/text-service
 
   frontend:
     if: github.event_name == 'pull_request' && github.base_ref == 'dev'
@@ -121,7 +121,7 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-        working-directory: app/frontend
+        working-directory: ./app/frontend
 
       - name: Scan code for exposed secrets
         uses: gitleaks/gitleaks-action@v2
@@ -130,4 +130,4 @@ jobs:
 
       - name: Run tests
         run: npm run test
-        working-directory: app/frontend
+        working-directory: ./app/frontend

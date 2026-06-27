@@ -26,12 +26,14 @@ jobs:
         run: |
           docker run --name user -e POSTGRES_PASSWORD=password -p 5432:5432 -d postgres:latest
           sleep 10 # Wait for PostgreSQL to start
+          docker ps -a
 
       - name: Install dependencies
         run: |
           npm install
           echo "DATABASE_URL=postgresql://user:password@localhost:5432/notedb" >> .env
           echo "JWT_SECRET=your-test-jwt-secret-key" >> .env
+          ls -al
         working-directory: ./app/auth-service
 
       - name: Scan code for exposed secrets

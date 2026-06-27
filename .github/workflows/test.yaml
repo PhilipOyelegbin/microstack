@@ -24,7 +24,7 @@ jobs:
 
       - name: Run postgresql container
         run: |
-          docker run --name user -e POSTGRES_PASSWORD=password -p 5432:5432 -d postgres:latest
+          docker run --name postgres -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=notedb -p 5432:5432 -d postgres:latest
           sleep 10 # Wait for PostgreSQL to start
           docker ps -a
 

@@ -33,8 +33,9 @@ jobs:
           npm install
           echo "DATABASE_URL=postgres://user:password@localhost:5432/notedb" > .env
           echo "JWT_SECRET=your-test-jwt-secret-key" >> .env
-          ls -al
-          npm run dev
+          npm run dev &
+          echo $! > app.pid
+          sleep 5
         working-directory: ./app/auth-service
 
       - name: Scan code for exposed secrets
@@ -43,7 +44,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run tests
-        run: npm run test
+        if: always()
+        run: |
+          npm run test
+          kill $(cat app.pid)
         working-directory: ./app/auth-service
 
   notes-services:

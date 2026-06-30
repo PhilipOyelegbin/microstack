@@ -21,6 +21,7 @@ jobs:
           echo "notes-image=$(docker ps --filter name=notes --format '{{.Image}}')" >> $GITHUB_OUTPUT
           echo "text-image=$(docker ps --filter name=text --format '{{.Image}}')" >> $GITHUB_OUTPUT
           echo "frontend-image=$(docker ps --filter name=frontend --format '{{.Image}}')" >> $GITHUB_OUTPUT
+          sleep 5
           docker ps -a
         working-directory: ./app
 
@@ -33,16 +34,43 @@ jobs:
           output: "trivy-results.sarif"
           severity: "CRITICAL,HIGH"
 
+      - name: Run Trivy vulnerability scanner for text service
+        uses: aquasecurity/trivy-action@7b7aa264d83dc58691451798b4d117d53d21edfe
+        with:
+          image-ref: ${{ steps.container.outputs.text-image }}
+          format: "template"
+          template: "@/contrib/sarif.tpl"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: Run Trivy vulnerability scanner for notes service
+        uses: aquasecurity/trivy-action@7b7aa264d83dc58691451798b4d117d53d21edfe
+        with:
+          image-ref: ${{ steps.container.outputs.notes-image }}
+          format: "template"
+          template: "@/contrib/sarif.tpl"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: Run Trivy vulnerability scanner for frontend
+        uses: aquasecurity/trivy-action@7b7aa264d83dc58691451798b4d117d53d21edfe
+        with:
+          image-ref: ${{ steps.container.outputs.frontend-image }}
+          format: "template"
+          template: "@/contrib/sarif.tpl"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH"
+
       - name: Run Smoke Tests (Verify all container is up)
         run: |
           echo "Running smoke test to verify Auth Service is up..."
           curl --fail "http://localhost:5000/health" || exit 1 
           echo "Auth smoke test passed."
           echo "Running smoke test to verify Notes Service is up..."
-          curl --fail "http://localhost:5001/health" || exit 1 
+          curl --fail "http://localhost:5002/health" || exit 1 
           echo "Notes smoke test passed."
           echo "Running smoke test to verify Text Service is up..."
-          curl --fail "http://localhost:5002/health" || exit 1 
+          curl --fail "http://localhost:5001/health" || exit 1 
           echo "Text smoke test passed."
           echo "Running smoke test to verify Frontend is up..."
           curl --fail "http://localhost:8000" || exit 1 

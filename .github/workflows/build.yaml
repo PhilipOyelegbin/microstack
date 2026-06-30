@@ -1,0 +1,49 @@
+name: Build, Scan and Test App Liveness
+
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  liveness-check:
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Start Docker Container
+        id: container
+        run: |
+          # Start a docker container.
+          docker compose up -d
+          echo "auth-image=$(docker ps | grep -i auth)" >> $GITHUB_OUTPUT
+          echo "notes-image=$(docker ps | grep -i notes)" >> $GITHUB_OUTPUT
+          echo "text-image=$(docker ps | grep -i text)" >> $GITHUB_OUTPUT
+          echo "frontend-image=$(docker ps | grep -i frontend)" >> $GITHUB_OUTPUT
+          docker ps -a
+        working-directory: ./app
+
+      - name: Run Trivy vulnerability scanner for auth service
+        uses: aquasecurity/trivy-action@7b7aa264d83dc58691451798b4d117d53d21edfe
+        with:
+          image-ref: ${{ steps.container.outputs.auth-image }}
+          format: "template"
+          template: "@/contrib/sarif.tpl"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: Run Smoke Tests (Verify all container is up)
+        run: |
+          echo "Running smoke test to verify Auth Service is up..."
+          curl --fail "http://localhost:5000/health" || exit 1 
+          echo "Auth smoke test passed."
+          echo "Running smoke test to verify Notes Service is up..."
+          curl --fail "http://localhost:5001/health" || exit 1 
+          echo "Notes smoke test passed."
+          echo "Running smoke test to verify Text Service is up..."
+          curl --fail "http://localhost:5002/health" || exit 1 
+          echo "Text smoke test passed."
+          echo "Running smoke test to verify Frontend is up..."
+          curl --fail "http://localhost:8000" || exit 1 
+          echo "Frontend smoke test passed."

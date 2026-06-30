@@ -1,0 +1,181 @@
+name: Build Image and Deploy To ECS
+
+on:
+  push:
+    branches: [main]
+
+env:
+  AWS_REGION: eu-west-2
+  AUTH_REPOSITORY: auth-repo
+  NOTES_REPOSITORY: notes-repo
+  TEXT_REPOSITORY: text-repo
+  ECS_SERVICE: microstack-service
+  ECS_CLUSTER: microstack-cluster
+  ECS_TASK_DEFINITION: ./scripts/notes-task-def.json
+  AUTH_CONTAINER_NAME: app-auth-services
+  NOTES_CONTAINER_NAME: app-notes-services
+  TEXT_CONTAINER_NAME: app-text-services
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.filter.outputs.app }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            app/**:
+              - 'auth-service/**'
+              - 'notes-service/**'
+              - 'text-service/**'
+              - 'frontend-service/**'
+
+  auth-services:
+    needs: changes
+    if: github.ref == 'refs/heads/main' && needs.changes.outputs.app == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push auth service image to Amazon ECR
+        id: auth-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Build a docker container and push it to ECR so that it can be deployed to ECS.
+          docker build -t $ECR_REGISTRY/$AUTH_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$AUTH_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$AUTH_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+        working-directory: ./app/auth-services
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: auth-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ env.ECS_TASK_DEFINITION }}
+          container-name: ${{ env.AUTH_CONTAINER_NAME }}
+          image: ${{ steps.auth-image.outputs.image }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.auth-task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+  notes-services:
+    needs: changes
+    if: github.ref == 'refs/heads/main' && needs.changes.outputs.app == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push notes service image to Amazon ECR
+        id: notes-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Build a docker container and push it to ECR so that it can be deployed to ECS.
+          docker build -t $ECR_REGISTRY/$NOTES_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$NOTES_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$NOTES_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+        working-directory: ./app/notes-services
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: notes-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ env.ECS_TASK_DEFINITION }}
+          container-name: ${{ env.NOTES_CONTAINER_NAME }}
+          image: ${{ steps.notes-image.outputs.image }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.notes-task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+  text-services:
+    needs: changes
+    if: github.ref == 'refs/heads/main' && needs.changes.outputs.app == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push text service image to Amazon ECR
+        id: text-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Build a docker container and push it to ECR so that it can be deployed to ECS.
+          docker build -t $ECR_REGISTRY/$TEXT_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$TEXT_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$TEXT_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+        working-directory: ./app/text-services
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: text-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ env.ECS_TASK_DEFINITION }}
+          container-name: ${{ env.TEXT_CONTAINER_NAME }}
+          image: ${{ steps.text-image.outputs.image }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.text-task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true

@@ -59,6 +59,10 @@ app.post("/login", async (req, res) => {
   res.json({ token });
 });
 
+app.get("/health", async (req, res) => {
+  res.status(200).json({ status: "OK", uptime: process.uptime() });
+});
+
 const PORT = process.env.PORT || 5000;
 if (process.env.NODE_ENV !== "test") {
   app.listen(PORT, (err) => {

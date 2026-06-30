@@ -1,0 +1,148 @@
+name: Test Microservice Application
+
+on:
+  pull_request:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+jobs:
+  auth-services:
+    if: github.event_name == 'pull_request' && github.base_ref == 'dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "24"
+
+      - name: Run postgresql container
+        run: |
+          docker run --name postgres -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=notedb -p 5432:5432 -d postgres:latest
+          sleep 10 # Wait for PostgreSQL to start
+          docker ps -a
+
+      - name: Install dependencies
+        run: |
+          npm install
+          echo "DATABASE_URL=postgres://user:password@localhost:5432/notedb" > .env
+          echo "JWT_SECRET=your-test-jwt-secret-key" >> .env
+          npm run dev &
+          echo $! > app.pid
+          sleep 5
+        working-directory: ./app/auth-service
+
+      - name: Scan code for exposed secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run tests
+        if: always()
+        run: |
+          npm run test
+          kill $(cat app.pid)
+        working-directory: ./app/auth-service
+
+  notes-services:
+    if: github.event_name == 'pull_request' && github.base_ref == 'dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.26"
+
+      - name: Install dependencies
+        run: go mod tidy
+        working-directory: ./app/notes-service
+
+      - name: Scan code for exposed secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build
+        run: go build -v ./...
+        working-directory: ./app/notes-service
+
+      - name: Test
+        run: go test -v ./...
+        working-directory: ./app/notes-service
+
+  text-services:
+    if: github.event_name == 'pull_request' && github.base_ref == 'dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        working-directory: ./app/text-service
+
+      - name: Scan code for exposed secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lint with flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        working-directory: ./app/text-service
+
+      - name: Test with pytest
+        run: |
+          pytest
+        working-directory: ./app/text-service
+
+  frontend:
+    if: github.event_name == 'pull_request' && github.base_ref == 'dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "24"
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: ./app/frontend
+
+      - name: Scan code for exposed secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run linter
+        run: npm run lint
+        working-directory: ./app/frontend

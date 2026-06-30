@@ -35,6 +35,7 @@ jobs:
           echo "DATABASE_URL=postgres://user:password@localhost:5432/notedb" > .env
           echo "JWT_SECRET=your-test-jwt-secret-key" >> .env
           ls -al
+          npm run dev
         working-directory: ./app/auth-service
 
       - name: Scan code for exposed secrets

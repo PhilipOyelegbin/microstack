@@ -64,7 +64,7 @@ func getNotes(c *gin.Context) {
 }
 
 func getHealth(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "OK", "uptime": time.Now().Unix()})
+	c.JSON(http.StatusOK, gin.H{"status": "OK"})
 }
 
 func main() {

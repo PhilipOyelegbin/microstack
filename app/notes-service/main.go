@@ -63,6 +63,10 @@ func getNotes(c *gin.Context) {
 	c.JSON(http.StatusOK, notes)
 }
 
+func getHealth(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": "OK", "uptime": time.Now().Unix()})
+}
+
 func main() {
 	initDB()
 	r := gin.Default()
@@ -76,5 +80,6 @@ func main() {
     }))
 	r.POST("/notes", createNote)
 	r.GET("/notes", getNotes)
+	r.GET("/health", getHealth)
 	r.Run(":" + os.Getenv("PORT"))
 }

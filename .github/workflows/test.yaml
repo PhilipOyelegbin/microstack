@@ -31,7 +31,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm install
-          echo "DATABASE_URL=postgres://user:password@postgres:5432/notedb" >> .env
+          echo "DATABASE_URL=postgres://user:password@localhost:5432/notedb" > .env
           echo "JWT_SECRET=your-test-jwt-secret-key" >> .env
           ls -al
         working-directory: ./app/auth-service

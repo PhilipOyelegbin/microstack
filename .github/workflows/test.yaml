@@ -27,6 +27,7 @@ jobs:
           docker run --name postgres -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=notedb -p 5432:5432 -d postgres:latest
           sleep 10 # Wait for PostgreSQL to start
           docker ps -a
+          psql -h localhost -U user -d notedb -f schema.sql
 
       - name: Install dependencies
         run: |

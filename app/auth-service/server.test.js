@@ -6,7 +6,6 @@ describe("Auth Endpoints", () => {
     const res = await request(app)
       .post("/login")
       .send({ username: "nobody", password: "password" });
-    console.error(await res.json());
     expect(res.statusCode).toEqual(401);
   });
 });

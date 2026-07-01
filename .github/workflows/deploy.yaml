@@ -6,12 +6,13 @@ on:
 
 env:
   AWS_REGION: eu-west-2
-  AUTH_REPOSITORY: auth-repo
-  NOTES_REPOSITORY: notes-repo
-  TEXT_REPOSITORY: text-repo
+  AUTH_REPOSITORY: ecs-microstack-auth
+  NOTES_REPOSITORY: ecs-microstack-notes
+  TEXT_REPOSITORY: ecs-microstack-text
+  FRONTEND_REPOSITORY: ecs-microstack-frontend
   ECS_SERVICE: microstack-service
   ECS_CLUSTER: microstack-cluster
-  ECS_TASK_DEFINITION: ./scripts/notes-task-def.json
+  ECS_TASK_DEFINITION: ./task-def/notes-task-def.json
   AUTH_CONTAINER_NAME: app-auth-services
   NOTES_CONTAINER_NAME: app-notes-services
   TEXT_CONTAINER_NAME: app-text-services
